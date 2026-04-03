@@ -1,1 +1,223 @@
+# FinTrack — Finance Dashboard
+
+A clean, interactive finance dashboard built as a single self-contained HTML file. No build tools, no dependencies to install, no server required.
+
+---
+
+## Quick Start
+
+```bash
+# Option 1 — just open it
+open finance-dashboard.html
+
+## What's Inside
+
+### Pages
+
+**Overview**
+The landing page. Shows four live summary cards (Total Balance, Total Income, Total Expenses, Savings Rate) with animated counter transitions when values change. Below those: a 6M/1Y switchable balance trend line chart, a spending-by-category donut chart with a live legend, and a six-row recent transactions table.
+
+**Transactions**
+Full paginated table (10 rows/page) of all transactions with:
+- Free-text search across description and category
+- Category dropdown filter
+- Type filter (income / expense)
+- Date range filter (from / to)
+- Sort by date, amount, description, category, or type
+- Active filter chips that show what's applied and can be individually dismissed
+- Column header click-to-sort with ascending/descending toggle
+- Edit and delete actions per row (Admin only)
+- Empty state with a "Clear filters" shortcut when no results match
+
+**Insights**
+Six KPI cards derived from live transaction data:
+- Top spending category with percentage of total
+- Average daily spend (based on 180-day window)
+- Largest single transaction
+- Income-to-expense ratio
+- Transaction count for the current month
+- Net cash flow with positive/negative colour coding
+
+Beneath the cards: a monthly expense trend (horizontal bar chart), a ranked spending category breakdown, and a grouped Income vs Expenses bar chart. An alert banner at the top changes dynamically — green if savings rate ≥ 30%, amber if between 0–30%, blue if no income is recorded.
+
+---
+
+## Feature Checklist
+
+| Feature | Status | Notes |
+|---|---|---|
+| Dashboard overview with summary cards | ✅ | Animated value transitions |
+| Balance trend chart | ✅ | Switchable 6M / 1Y |
+| Spending breakdown chart | ✅ | Donut, live from transaction data |
+| Transactions table | ✅ | Paginated, 10 rows/page |
+| Search | ✅ | Matches description and category |
+| Filters | ✅ | Category, type, date range |
+| Sort | ✅ | All columns, click header or dropdown |
+| Active filter chips | ✅ | Individually dismissible |
+| Role-based UI (Admin / Viewer) | ✅ | Sidebar dropdown |
+| Add transaction (Admin) | ✅ | Modal with validation |
+| Edit transaction (Admin) | ✅ | Pre-filled modal |
+| Delete transaction (Admin) | ✅ | Confirmation modal |
+| Insights section | ✅ | 6 KPI cards + 3 charts |
+| Dark mode | ✅ | Toggle in topbar, persisted |
+| Light mode | ✅ | Full token swap |
+| Data persistence | ✅ | localStorage, survives refresh |
+| Mock API simulation | ✅ | Async delays on load/save/delete |
+| Loading skeleton | ✅ | Shimmer animation on boot |
+| Export CSV | ✅ | Respects active filters |
+| Export JSON | ✅ | Respects active filters |
+| Toast notifications | ✅ | success / error / warning / info |
+| Keyboard shortcuts | ✅ | Esc closes modals, Ctrl+N adds |
+| Responsive — desktop | ✅ | Up to 1440px max-width |
+| Responsive — tablet | ✅ | 2-col cards, stacked charts |
+| Responsive — mobile | ✅ | Hamburger nav, 1-col layout |
+| Empty state handling | ✅ | All tables and charts |
+| Page state persistence | ✅ | Last visited page restored on reload |
+| Role state persistence | ✅ | Role saved across sessions |
+
+---
+
+## Role-Based UI
+
+Switch roles using the dropdown at the bottom of the sidebar.
+
+**Admin**
+- Can add transactions (button in Transactions header, or Ctrl+N)
+- Can edit any transaction (pencil icon per row)
+- Can delete any transaction (trash icon, with confirmation)
+- Sees all action columns
+
+**Viewer**
+- All data is visible; all charts and insights work normally
+- A blue notice banner appears at the top of each page
+- Add, Edit, and Delete controls are hidden (not just disabled)
+- Switching back to Admin immediately restores all controls
+
+Role and theme choices are saved to localStorage and restored on the next visit.
+
+---
+
+## State Management
+
+All application state lives in a single `S` object that acts as a thin localStorage adapter:
+
+```
+S.txns   → transaction array (read/write, JSON serialised)
+S.theme  → 'dark' | 'light'
+S.role   → 'admin' | 'viewer'
+S.page   → last visited page name
+```
+
+UI state (current page, pagination, sort/filter values) lives in plain JS variables and is derived on each render — no stale cache to manage. Render functions are pure in the sense that they always read from `txns` and the DOM filter inputs, so the UI is always consistent with the data.
+
+The mock API layer (`mockApi` object) wraps all mutations in `async/await` with realistic random delays (280–600ms). This means the save and delete flows are genuinely async — the UI disables the save button and shows "Saving…" while the call is in flight, then shows a toast on resolution. Switching to a real REST API would only require replacing the three methods on `mockApi`.
+
+---
+
+## Mock API
+
+```js
+mockApi.fetchTransactions()    // GET  — resolves with full txns array (~600–1000ms)
+mockApi.saveTransaction(payload) // POST/PUT — resolves with saved object (~350ms)
+mockApi.deleteTransaction(id)    // DELETE — resolves with { success, id } (~280ms)
+```
+
+To wire up a real backend, replace these three functions with `fetch()` calls. No other code changes needed — all callers already handle the returned promises.
+
+---
+
+## File Structure
+
+Everything is in one file for portability. Internally it's organised into clear sections marked with banner comments:
+
+```
+finance-dashboard.html
+  ├── <style>
+  │     ├── Theme tokens (CSS custom properties, dark + light)
+  │     ├── Reset & base
+  │     ├── Sidebar
+  │     ├── Topbar
+  │     ├── Pages & animations
+  │     ├── Loading skeleton
+  │     ├── Toast system
+  │     ├── Summary cards
+  │     ├── Chart cards
+  │     ├── Buttons & filters
+  │     ├── Table & badges
+  │     ├── Pagination
+  │     ├── Empty states
+  │     ├── Modals (add/edit, confirm delete)
+  │     ├── Insights
+  │     └── Responsive breakpoints (1100px, 768px, 480px)
+  ├── <body>
+  │     ├── Sidebar (nav + role switcher)
+  │     ├── Topbar (title + theme toggle + avatar)
+  │     ├── Loading skeleton
+  │     ├── Page: Dashboard
+  │     ├── Page: Transactions
+  │     ├── Page: Insights
+  │     ├── Modal: Add / Edit transaction
+  │     └── Modal: Confirm delete
+  └── <script>
+        ├── State (S adapter + txns array)
+        ├── Mock API
+        ├── Formatting helpers
+        ├── Toast system
+        ├── Theme
+        ├── Role
+        ├── Navigation
+        ├── Data computed (totals, category rollups)
+        ├── Dashboard render
+        ├── Charts (Chart.js, with theme-aware colours)
+        ├── Transactions (filter, sort, paginate, render)
+        ├── CRUD (add, edit, delete with mock API)
+        ├── Export (CSV + JSON)
+        ├── Insights render
+        ├── Mobile sidebar
+        ├── Keyboard shortcuts
+        └── Init (boot sequence with skeleton loader)
+```
+
+---
+
+## Design Decisions
+
+**Single file** — zero setup friction. Anyone with the file can open it immediately without npm, a bundler, or environment variables.
+
+**DM Serif Display + DM Mono + Outfit** — the serif gives the logo and modal titles character; the mono makes financial figures scannable; Outfit keeps body text clean without the genericness of Inter or Roboto.
+
+**Dark-first with full light mode** — every colour is a CSS custom property. Switching themes swaps the token values; no hardcoded hex values appear in component styles. Charts recalculate their colour arguments from the current theme on every rebuild.
+
+**Animated number counters** — summary card values ease in on load and whenever data changes, using `requestAnimationFrame` with a cubic-ease function. This draws attention to changes without being distracting.
+
+**Defensive empty states** — every table and list checks for empty data and renders a centred illustration with a descriptive message and a contextual action button, rather than showing a blank area or broken layout.
+
+**Confirmation before delete** — destructive actions go through a modal confirmation step with the transaction name shown, so users can verify they're deleting the right record.
+
+**Filter chips** — active filters are reflected as removable chips above the table, giving users a clear picture of what's applied and letting them remove individual filters without clearing everything.
+
+---
+
+## Browser Support
+
+Works in any modern browser (Chrome, Firefox, Safari, Edge). No polyfills needed. Uses:
+- CSS custom properties (variables)
+- CSS Grid and Flexbox
+- `async/await`
+- `localStorage`
+- `requestAnimationFrame`
+- Chart.js 4.4.1 (loaded from cdnjs)
+- Google Fonts (loaded from fonts.googleapis.com)
+
+Offline use: fonts and Chart.js require an internet connection on first load. After that, browsers cache both aggressively.
+
+---
+
+## Assumptions
+
+- All monetary values are in USD.
+- The 25 seed transactions cover January–June 2025 and serve as realistic demo data.
+- The 180-day window used for "average daily spend" is fixed to match the seed data period.
+- Monthly chart data for the trend and income/expense charts uses static illustrative figures rather than being computed from the seed transactions (which only partially cover each month). This is a reasonable assumption for a frontend-only demo — a real backend would return pre-aggregated monthly summaries.
+- "This month" in the Insights page is hardcoded to June 2025 to match the seed data. In production this would use `new Date()`.
 
